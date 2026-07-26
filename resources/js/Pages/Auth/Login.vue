@@ -81,19 +81,13 @@ const loginAsGuest = () => {
       </div>
     </template>
 
-    <!-- הרשמה ראשונית כשהאתר חדש -->
-    <template v-if="$page.props.canRegister">
-      <div class="auth-divider"><span>הרשמה ראשונית</span></div>
-      <Link href="/register" class="auth-btn" style="background:#16a34a;display:block;text-align:center;text-decoration:none">
-        🌱 הרשמה ראשונית כמנהל/ת המשפחה
-      </Link>
-      <div class="auth-foot" style="color:#15803d;font-size:0.85rem;margin-top:0.5rem">
-        ההרשמה הראשונה תגדיר אותך כמנהל/ת האתר ועץ המשפחה
-      </div>
-    </template>
-
-    <div v-else class="auth-foot" style="color:#8aace0;font-size:0.82rem">
-      🔒 כניסה בהזמנה בלבד — פנה למנהל/ת האתר
+    <!-- הרשמה -->
+    <div class="auth-divider"><span>עדיין אין לך חשבון?</span></div>
+    <Link href="/register" class="auth-btn" style="background:#16a34a;display:block;text-align:center;text-decoration:none">
+      🌱 הרשמה לאתר (יצירת חשבון חדש)
+    </Link>
+    <div class="auth-foot" style="color:#15803d;font-size:0.83rem;margin-top:0.5rem;text-align:center">
+      ההרשמה הראשונה תגדיר אותך כמנהל/ת האתר ועץ המשפחה
     </div>
   </GuestLayout>
 </template>

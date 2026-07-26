@@ -13,19 +13,10 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', function () {
-        if (\App\Models\User::count() === 0) {
-            return app(\App\Http\Controllers\Auth\RegisteredUserController::class)->create();
-        }
-        return redirect()->route('login')->with('error', 'ההרשמה סגורה. יש לקבל הזמנה ממנהל/ת המשפחה.');
-    })->name('register');
+    Route::get('register', [RegisteredUserController::class, 'create'])
+        ->name('register');
 
-    Route::post('register', function (\Illuminate\Http\Request $request) {
-        if (\App\Models\User::count() === 0) {
-            return app(\App\Http\Controllers\Auth\RegisteredUserController::class)->store($request);
-        }
-        return redirect()->route('login');
-    });
+    Route::post('register', [RegisteredUserController::class, 'store']);
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
