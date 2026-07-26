@@ -13,9 +13,19 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    // הרשמה חסומה — כניסה בהזמנה בלבד
-    Route::get('register', fn() => redirect()->route('login'))->name('register');
-    Route::post('register', fn() => redirect()->route('login'));
+    Route::get('register', function () {
+        if (\App\Models\User::count() === 0) {
+            return app(\App\Http\Controllers\Auth\RegisteredUserController::class)->create();
+        }
+        return redirect()->route('login')->with('error', 'ההרשמה סגורה. יש לקבל הזמנה ממנהל/ת המשפחה.');
+    })->name('register');
+
+    Route::post('register', function (\Illuminate\Http\Request $request) {
+        if (\App\Models\User::count() === 0) {
+            return app(\App\Http\Controllers\Auth\RegisteredUserController::class)->store($request);
+        }
+        return redirect()->route('login');
+    });
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

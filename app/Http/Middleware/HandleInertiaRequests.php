@@ -44,6 +44,7 @@ class HandleInertiaRequests extends Middleware
             // מצב אתר-הדגמה — באנר "הכל בדוי" ושם משפחה בדוי בכל הכותרות
             'demo'          => (bool) config('app.demo'),
             'siteName'      => config('app.demo') ? 'משפחת ישראלי (הדגמה)' : config('app.name', 'משפחת מלכה'),
+            'canRegister'   => \App\Models\User::count() === 0,
         ];
     }
 }
