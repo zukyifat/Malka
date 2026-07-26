@@ -1,19 +1,6 @@
-# Multi-stage Dockerfile for Laravel + Vue 3 (Inertia) on Render.com
-
-# Stage 1: Build Vue 3 Assets with Node.js
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-# Stage 2: PHP 8.3 Apache Server
 FROM php:8.3-apache
 
-# Install dependencies and extensions
+# Install dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -39,11 +26,8 @@ RUN a2enmod rewrite
 
 WORKDIR /var/www/html
 
-# Copy application files
+# Copy application files (includes pre-built assets in public/build)
 COPY . .
-
-# Copy built frontend assets
-COPY --from=frontend-builder /app/public/build ./public/build
 
 # Install PHP packages
 RUN composer install --no-dev --optimize-autoloader --no-interaction
