@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Models;
+
+use App\Models\Concerns\HasOriginUuid;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Photo extends Model
+{
+    use HasOriginUuid;
+
+    protected $fillable = [
+        'person_id', 'event_id', 'thumb_path', 'original_path',
+        'crop_x', 'crop_y', 'crop_w', 'crop_h',
+        'caption', 'taken_at', 'uploaded_by', 'origin_uuid',
+    ];
+
+    protected $casts = [
+        'taken_at' => 'date',
+    ];
+
+    protected $appends = ['thumb_url', 'original_url'];
+
+    public function getThumbUrlAttribute(): string
+    {
+        return asset('storage/' . $this->thumb_path);
+    }
+
+    public function getOriginalUrlAttribute(): string
+    {
+        return asset('storage/' . ($this->original_path ?: $this->thumb_path));
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
+    }
+
+    public function uploader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
+    }
+}

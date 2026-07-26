@@ -1,0 +1,22 @@
+/node_modules
+# /public/build  ← included in git for simple shared-hosting deploy
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+# סקריפטי פריסה אישיים — מכילים פרטי שרת. מעתיקי הפרויקט מגדירים את שלהם.
+deploy.ps1
+ssh-server.bat
+.cursor/last-deployed

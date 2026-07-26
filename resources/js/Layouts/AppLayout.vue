@@ -1,0 +1,367 @@
+<template>
+  <div class="app-layout">
+    <!-- באנר אתר-הדגמה — מופיע רק כש-APP_DEMO=true -->
+    <div v-if="$page.props.demo" class="demo-banner" dir="rtl">
+      🎭 אתר הדגמה — כל הדמויות, התאריכים והנתונים כאן בדויים לחלוטין. מוזמנים לנסות ולערוך הכל; הנתונים מתאפסים מדי לילה.
+    </div>
+
+    <!-- Navbar -->
+    <nav class="app-nav" dir="rtl">
+      <div class="nav-inner">
+        <!-- לוגו -->
+        <Link href="/family-tree" class="nav-logo">
+          <TreePine class="logo-icon" :size="22" />
+          <span class="logo-text">{{ $page.props.siteName || 'משפחת ואקיל' }}</span>
+        </Link>
+
+        <!-- ניווט ראשי -->
+        <div class="nav-links">
+          <Link href="/family-tree" :class="['nav-link', { active: $page.url === '/family-tree' }]"><Network :size="18" /> עץ משפחה</Link>
+          <Link href="/people" :class="['nav-link', { active: $page.url.startsWith('/people') && !$page.url.startsWith('/people/create') }]"><Users :size="18" /> בני המשפחה</Link>
+          <Link href="/family-photos" :class="['nav-link', { active: $page.url.startsWith('/family-photos') }]"><Images :size="18" /> תמונות</Link>
+          <Link href="/events" :class="['nav-link', { active: $page.url.startsWith('/events') }]"><CalendarDays :size="18" /> אירועים</Link>
+
+          <!-- פעילות dropdown -->
+          <div class="nav-dropdown" :class="{ open: activityOpen }" @mouseenter="activityOpen = true" @mouseleave="activityOpen = false">
+            <button class="nav-link dropdown-trigger" :class="{ active: isActivityActive }">
+              <Sparkles :size="18" /> פעילות <ChevronDown :size="14" class="chevron" />
+            </button>
+            <div class="dropdown-menu">
+              <Link href="/recipes" class="dropdown-item" @click="activityOpen = false"><ChefHat :size="16" /> מתכונים</Link>
+              <Link href="/name-stories" class="dropdown-item" @click="activityOpen = false"><ScrollText :size="16" /> סיפורי שמות</Link>
+              <Link href="/game" class="dropdown-item" @click="activityOpen = false"><Gamepad2 :size="16" /> משחק</Link>
+              <Link href="/stats" class="dropdown-item" @click="activityOpen = false"><BarChart3 :size="16" /> מספרים</Link>
+              <Link href="/print/tree" class="dropdown-item" @click="activityOpen = false"><Printer :size="16" /> הדפסה</Link>
+            </div>
+          </div>
+
+          <Link v-if="$page.props.auth.user.role === 'admin'" href="/admin" :class="['nav-link', { active: $page.url.startsWith('/admin') }]"><Settings :size="18" /> ניהול</Link>
+        </div>
+
+        <!-- משתמש -->
+        <div class="nav-user">
+          <span class="user-name">{{ $page.props.auth.user.name }}</span>
+          <div class="user-menu">
+            <Link href="/profile" class="user-menu-item">פרופיל</Link>
+            <Link href="/logout" method="post" as="button" class="user-menu-item logout">יציאה</Link>
+          </div>
+        </div>
+
+        <!-- המבורגר מובייל -->
+        <button class="hamburger" @click="mobileOpen = !mobileOpen">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+
+      <!-- תפריט מובייל -->
+      <div v-if="mobileOpen" class="mobile-menu" dir="rtl">
+        <Link href="/family-tree" class="mobile-link" @click="mobileOpen = false"><Network :size="18" /> עץ משפחה</Link>
+        <Link href="/people" class="mobile-link" @click="mobileOpen = false"><Users :size="18" /> בני המשפחה</Link>
+        <Link href="/family-photos" class="mobile-link" @click="mobileOpen = false"><Images :size="18" /> תמונות</Link>
+        <Link href="/events" class="mobile-link" @click="mobileOpen = false"><CalendarDays :size="18" /> אירועים</Link>
+        <div class="mobile-section-label">פעילות</div>
+        <Link href="/recipes" class="mobile-link mobile-indent" @click="mobileOpen = false"><ChefHat :size="18" /> מתכונים</Link>
+        <Link href="/name-stories" class="mobile-link mobile-indent" @click="mobileOpen = false"><ScrollText :size="18" /> סיפורי שמות</Link>
+        <Link href="/game" class="mobile-link mobile-indent" @click="mobileOpen = false"><Gamepad2 :size="18" /> משחק</Link>
+        <Link href="/stats" class="mobile-link mobile-indent" @click="mobileOpen = false"><BarChart3 :size="18" /> מספרים</Link>
+        <Link href="/print/tree" class="mobile-link mobile-indent" @click="mobileOpen = false"><Printer :size="18" /> הדפסה</Link>
+        <Link v-if="$page.props.auth.user.role === 'admin'" href="/admin" class="mobile-link" @click="mobileOpen = false"><Settings :size="18" /> ניהול</Link>
+        <Link href="/profile" class="mobile-link" @click="mobileOpen = false">פרופיל</Link>
+        <Link href="/logout" method="post" as="button" class="mobile-link mobile-logout" @click="mobileOpen = false">יציאה</Link>
+      </div>
+    </nav>
+
+    <!-- Flash Message -->
+    <div v-if="$page.props.flash?.success" class="flash-success" dir="rtl">
+      ✓ {{ $page.props.flash.success }}
+    </div>
+
+    <!-- תוכן הדף -->
+    <main class="app-main">
+      <slot />
+    </main>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
+import { TreePine, Network, Users, Images, CalendarDays, Gamepad2, BarChart3, Printer, Settings, ChefHat, Sparkles, ChevronDown, ScrollText } from 'lucide-vue-next'
+
+defineProps({
+  title: { type: String, default: '' },
+})
+
+const mobileOpen = ref(false)
+const activityOpen = ref(false)
+const page = usePage()
+
+const isActivityActive = computed(() => {
+  const url = page.url
+  return url.startsWith('/game') || url.startsWith('/stats') || url.startsWith('/print') || url.startsWith('/name-stories') || url.startsWith('/recipes')
+})
+</script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&display=swap');
+
+.app-layout {
+  min-height: 100vh;
+  background: #f4f8ff;
+  font-family: 'Rubik', sans-serif;
+}
+
+/* באנר אתר-הדגמה */
+.demo-banner {
+  background: repeating-linear-gradient(135deg, #fef3c7, #fef3c7 14px, #fde68a 14px, #fde68a 28px);
+  color: #92400e;
+  border-bottom: 1px solid #f59e0b;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Navbar */
+.app-nav {
+  background: white;
+  border-bottom: 1px solid #e0eaf8;
+  box-shadow: 0 2px 8px rgba(0,50,150,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.logo-icon { color: #2d8a4e; flex-shrink: 0; }
+
+.logo-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a3a6b;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #4a5568;
+  text-decoration: none;
+  font-size: 0.93rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-link svg { color: #8aa0c2; transition: color 0.2s; flex-shrink: 0; }
+.nav-link:hover svg, .nav-link.active svg { color: #2d6be4; }
+
+.nav-link:hover, .nav-link.active {
+  color: #2d6be4;
+  background: #edf3ff;
+}
+
+/* Dropdown */
+.nav-dropdown {
+  position: relative;
+}
+
+.dropdown-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+  font-size: 0.93rem;
+}
+
+.chevron {
+  transition: transform 0.2s;
+  color: #8aa0c2 !important;
+}
+
+.nav-dropdown.open .chevron {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: white;
+  border: 1px solid #e0eaf8;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,50,150,0.1);
+  padding: 0.4rem;
+  min-width: 140px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: all 0.2s;
+  z-index: 200;
+}
+
+.nav-dropdown.open .dropdown-menu,
+.nav-dropdown:hover .dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  color: #4a5568;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-radius: 7px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.dropdown-item svg { color: #8aa0c2; flex-shrink: 0; }
+.dropdown-item:hover { background: #edf3ff; color: #2d6be4; }
+.dropdown-item:hover svg { color: #2d6be4; }
+
+.nav-user {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-name {
+  font-size: 0.88rem;
+  color: #4a5568;
+  cursor: pointer;
+}
+
+.user-menu {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.user-menu-item {
+  font-size: 0.85rem;
+  color: #6b7a99;
+  text-decoration: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  transition: color 0.2s;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+}
+
+.user-menu-item:hover { color: #2d6be4; }
+.user-menu-item.logout:hover { color: #e74c3c; }
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  margin-right: auto;
+}
+
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #4a5568;
+  border-radius: 2px;
+}
+
+.mobile-menu {
+  border-top: 1px solid #e0eaf8;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  color: #2d4a7a;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Rubik', sans-serif;
+  text-align: right;
+}
+
+.mobile-link svg { color: #8aa0c2; flex-shrink: 0; }
+.mobile-link:hover { background: #edf3ff; }
+.mobile-logout { color: #e74c3c; }
+
+.mobile-section-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #9aa5b4;
+  padding: 0.5rem 0.75rem 0.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mobile-indent {
+  padding-right: 1.5rem;
+}
+
+/* Flash */
+.flash-success {
+  max-width: 1100px;
+  margin: 1rem auto 0;
+  padding: 0.75rem 1.5rem;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 10px;
+  color: #065f46;
+  font-size: 0.9rem;
+}
+
+/* Main */
+.app-main {
+  max-width: 100%;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .nav-links, .nav-user { display: none; }
+  .hamburger { display: flex; }
+}
+</style>

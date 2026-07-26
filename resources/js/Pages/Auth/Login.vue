@@ -1,0 +1,88 @@
+<script setup>
+import GuestLayout from '@/Layouts/GuestLayout.vue'
+import { Head, Link, useForm } from '@inertiajs/vue3'
+
+defineProps({
+  canResetPassword: { type: Boolean },
+  status: { type: String },
+})
+
+const form = useForm({
+  email: '',
+  password: '',
+  remember: false,
+})
+
+const submit = () => {
+  form.post(route('login'), {
+    onFinish: () => form.reset('password'),
+  })
+}
+
+// כניסת אורח בדמו — מתחברים דרך ה-login הרגיל עם פרטי האורח הקבועים
+// (לא דרך endpoint ייעודי, כדי לא להיחסם ע"י שכבת ה-edge של האחסון)
+const loginAsGuest = () => {
+  form.email = 'guest@example.com'
+  form.password = 'demo1234'
+  form.remember = true
+  form.post(route('login'), {
+    onFinish: () => form.reset('password'),
+  })
+}
+</script>
+
+<template>
+  <GuestLayout title="ברוכים הבאים" subtitle="התחברו כדי להיכנס למעגל המשפחה">
+    <Head title="התחברות" />
+
+    <div v-if="status" class="auth-status">{{ status }}</div>
+    <div v-if="$page.props.flash?.error" class="auth-error" style="margin-bottom:1rem;text-align:center">
+      {{ $page.props.flash.error }}
+    </div>
+
+    <form @submit.prevent="submit">
+      <div class="auth-field">
+        <label class="auth-label" for="email">אימייל</label>
+        <input id="email" type="email" class="auth-input" v-model="form.email"
+          required autofocus autocomplete="username" dir="ltr" placeholder="name@example.com" />
+        <div v-if="form.errors.email" class="auth-error">{{ form.errors.email }}</div>
+      </div>
+
+      <div class="auth-field">
+        <label class="auth-label" for="password">סיסמה</label>
+        <input id="password" type="password" class="auth-input" v-model="form.password"
+          required autocomplete="current-password" dir="ltr" placeholder="••••••••" />
+        <div v-if="form.errors.password" class="auth-error">{{ form.errors.password }}</div>
+      </div>
+
+      <div class="auth-row">
+        <label class="auth-checkbox">
+          <input type="checkbox" v-model="form.remember" />
+          <span>זכור אותי</span>
+        </label>
+        <Link v-if="canResetPassword" :href="route('password.request')" class="auth-link">
+          שכחת סיסמה?
+        </Link>
+      </div>
+
+      <button type="submit" class="auth-btn" :disabled="form.processing">
+        {{ form.processing ? 'מתחבר...' : 'התחברות' }}
+      </button>
+    </form>
+
+    <!-- כניסת אורח — רק באתר ההדגמה -->
+    <template v-if="$page.props.demo">
+      <div class="auth-divider"><span>או</span></div>
+      <button type="button" class="auth-btn" style="background:#d97706" :disabled="form.processing" @click="loginAsGuest">
+        {{ form.processing ? 'נכנס...' : '🎭 כניסה כאורח/ת — בלי סיסמה' }}
+      </button>
+      <div class="auth-foot" style="color:#b45309;font-size:0.82rem">
+        זהו אתר הדגמה עם נתונים בדויים — מוזמנים להסתובב ולנסות הכל
+      </div>
+    </template>
+
+    <div v-else class="auth-foot" style="color:#8aace0;font-size:0.82rem">
+      🔒 כניסה בהזמנה בלבד — פנה למנהל/ת האתר
+    </div>
+  </GuestLayout>
+</template>

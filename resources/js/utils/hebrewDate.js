@@ -1,0 +1,181 @@
+// המרת תאריכים עברי ↔ לועזי, עם תצוגת גימטריה (כ"ז בתשרי תשע"ח).
+// משתמש ב-@hebcal/core לחישוב הלוח, ובפורמט גימטריה ידני לתצוגה עקבית.
+import { HDate } from '@hebcal/core'
+
+// ─── גימטריה ──────────────────────────────────────────────────
+const ONES     = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט']
+const TENS     = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ']
+const HUNDREDS = ['', 'ק', 'ר', 'ש', 'ת', 'תק', 'תר', 'תש', 'תת', 'תתק']
+
+// ערכי אותיות (כולל סופיות) לפירוק מחרוזת → מספר
+const LETTER_VALUES = {
+  'א': 1, 'ב': 2, 'ג': 3, 'ד': 4, 'ה': 5, 'ו': 6, 'ז': 7, 'ח': 8, 'ט': 9,
+  'י': 10, 'כ': 20, 'ך': 20, 'ל': 30, 'מ': 40, 'ם': 40, 'נ': 50, 'ן': 50,
+  'ס': 60, 'ע': 70, 'פ': 80, 'ף': 80, 'צ': 90, 'ץ': 90,
+  'ק': 100, 'ר': 200, 'ש': 300, 'ת': 400,
+}
+
+// מספר → אותיות גימטריה (לשנים מורידים אלפים: 5778 → תשע"ח)
+export function toGematria(num) {
+  let n = num % 1000
+  let s = HUNDREDS[Math.floor(n / 100)]
+  n %= 100
+  if (n === 15)      s += 'טו'   // לא יה
+  else if (n === 16) s += 'טז'   // לא יו
+  else               s += TENS[Math.floor(n / 10)] + ONES[n % 10]
+  if (s.length <= 1) return s + '׳'                 // גרש לאות בודדת
+  return s.slice(0, -1) + '"' + s.slice(-1)         // גרשיים לפני האות האחרונה
+}
+
+// אותיות גימטריה → מספר (סכום ערכי האותיות, מתעלם מגרשיים)
+function fromGematria(str) {
+  let n = 0
+  for (const ch of str) n += LETTER_VALUES[ch] || 0
+  return n
+}
+
+// ─── שמות חודשים ──────────────────────────────────────────────
+// hebcal getMonthName() מחזיר תעתיק אנגלי — ממפים לעברי לתצוגה
+const HEB_MONTH_FROM_EN = {
+  'Nisan': 'ניסן', 'Iyyar': 'אייר', 'Sivan': 'סיוון', 'Tamuz': 'תמוז',
+  'Av': 'אב', 'Elul': 'אלול', 'Tishrei': 'תשרי', "Cheshvan": 'חשוון',
+  'Kislev': 'כסלו', 'Tevet': 'טבת', "Sh'vat": 'שבט', 'Shvat': 'שבט',
+  'Adar': 'אדר', 'Adar I': 'אדר א׳', 'Adar II': 'אדר ב׳',
+  'Adar 1': 'אדר א׳', 'Adar 2': 'אדר ב׳',
+}
+
+// שם חודש עברי (מנורמל) → שם אנגלי עבור בניית HDate
+const EN_MONTH_FROM_HEB = {
+  'ניסן': 'Nisan', 'אייר': 'Iyyar', 'אִיָּר': 'Iyyar', 'סיון': 'Sivan', 'סיוון': 'Sivan',
+  'תמוז': 'Tamuz', 'אב': 'Av', 'מנחםאב': 'Av', 'אלול': 'Elul',
+  'תשרי': 'Tishrei', 'חשון': 'Cheshvan', 'חשוון': 'Cheshvan', 'מרחשון': 'Cheshvan', 'מרחשוון': 'Cheshvan',
+  'כסלו': 'Kislev', 'כסליו': 'Kislev', 'טבת': 'Tevet', 'שבט': 'Shvat',
+  'אדר': 'Adar', 'אדרא': 'Adar I', 'אדרב': 'Adar II', 'אדרראשון': 'Adar I', 'אדרשני': 'Adar II',
+}
+
+// ─── המרה לועזי → עברי (מחזיר "כ"ז בתשרי תשע"ח") ────────────────
+export function gregorianToHebrew(dateStr) {
+  if (!dateStr) return ''
+  try {
+    const d  = new Date(dateStr + 'T12:00:00')
+    if (isNaN(d)) return ''
+    const hd = new HDate(d)
+    const day   = toGematria(hd.getDate())
+    const month = HEB_MONTH_FROM_EN[hd.getMonthName()] || hd.getMonthName()
+    const year  = toGematria(hd.getFullYear())
+    return `${day} ב${month} ${year}`
+  } catch { return '' }
+}
+
+// ─── פירוק לרכיבים עבריים (יום/חודש/שנה) ──────────────────────
+// מחזיר { day, dayHe, monthEn, monthHe, year, yearHe } או null
+export function gregorianToHebrewParts(dateStr) {
+  if (!dateStr) return null
+  try {
+    const d = new Date(dateStr + 'T12:00:00')
+    if (isNaN(d)) return null
+    const hd = new HDate(d)
+    const monthEn = hd.getMonthName()
+    return {
+      day:     hd.getDate(),
+      dayHe:   toGematria(hd.getDate()),
+      monthEn,
+      monthHe: HEB_MONTH_FROM_EN[monthEn] || monthEn,
+      year:    hd.getFullYear(),
+      yearHe:  toGematria(hd.getFullYear()),
+    }
+  } catch { return null }
+}
+
+// תווית יום+חודש עברי בלבד (בלי שנה), למשל "כ"ז בתשרי" — לימי הולדת
+export function hebrewDayMonth(dateStr) {
+  const p = gregorianToHebrewParts(dateStr)
+  return p ? `${p.dayHe} ב${p.monthHe}` : ''
+}
+
+// אדר / אדר א' / אדר ב' — נחשבים כאותו חודש לצורך "מי חוגג החודש"
+const ADAR_FAMILY = new Set(['Adar', 'Adar I', 'Adar II'])
+
+// מידע על יום-הולדת/יום-נישואין עברי מתוך תאריך לועזי:
+// מחזיר { label, diffDays, isToday, inWeek, inMonth, nextGreg } או null.
+// diffDays = מספר הימים עד המופע הקרוב של התאריך העברי (0 = היום).
+export function hebBirthdayInfo(gregorianStr, today = new Date()) {
+  const p = gregorianToHebrewParts(gregorianStr)
+  if (!p) return null
+  const todayHd    = new HDate(today)
+  const curYear    = todayHd.getFullYear()
+  const curMonthEn = todayHd.getMonthName()
+  const d0 = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+
+  // התאריך הלועזי של המופע העברי בשנה נתונה (עם נפילה-לאחור לאדר בשנה מעוברת/רגילה)
+  function occGreg(year) {
+    let hd
+    try { hd = new HDate(p.day, p.monthEn, year) }
+    catch {
+      try { hd = new HDate(p.day, 'Adar II', year) }
+      catch { try { hd = new HDate(p.day, 'Adar', year) } catch { return null } }
+    }
+    const g = hd.greg()
+    return new Date(g.getFullYear(), g.getMonth(), g.getDate())
+  }
+
+  let gd = occGreg(curYear)
+  if (!gd) return null
+  // אם המופע כבר עבר השנה — קח את המופע בשנה העברית הבאה (לחישוב "השבוע" סביב ראש השנה)
+  if (gd < d0) { const g2 = occGreg(curYear + 1); if (g2) gd = g2 }
+
+  const diffDays = Math.round((gd - d0) / 86400000)
+  const inMonth  = (ADAR_FAMILY.has(p.monthEn) && ADAR_FAMILY.has(curMonthEn)) || p.monthEn === curMonthEn
+
+  return {
+    label:   `${p.dayHe} ב${p.monthHe}`,
+    dayHe:   p.dayHe,
+    monthHe: p.monthHe,
+    diffDays,
+    isToday: diffDays === 0,
+    inWeek:  diffDays >= 0 && diffDays <= 6,
+    inMonth,
+    nextGreg: gd,
+  }
+}
+
+// החודש העברי הנוכחי — { monthEn, monthHe, year }
+export function currentHebrewMonth(today = new Date()) {
+  const hd = new HDate(today)
+  const monthEn = hd.getMonthName()
+  return {
+    monthEn,
+    monthHe: HEB_MONTH_FROM_EN[monthEn] || monthEn,
+    year: hd.getFullYear(),
+    day: hd.getDate(),
+  }
+}
+
+// ─── המרה עברי → לועזי (מחזיר "YYYY-MM-DD" או '') ──────────────
+export function hebrewToGregorian(hebrewStr) {
+  if (!hebrewStr) return ''
+  try {
+    // ניקוי גרשיים/גרשים והפיכה לטוקנים
+    const clean  = hebrewStr.replace(/["'״׳`]/g, '').trim()
+    const tokens = clean.split(/\s+/).filter(Boolean)
+    if (tokens.length < 3) return ''   // צריך יום + חודש + שנה (אדר א'/ב' = חודש דו-מילתי)
+
+    // בתאריך עברי: היום ראשון, השנה אחרונה, והחודש כל מה שביניהם
+    const day  = fromGematria(tokens[0])
+    let year   = fromGematria(tokens[tokens.length - 1])
+    if (year < 1000) year += 5000      // תשע"ח → 778 → 5778
+
+    let monthStr = tokens.slice(1, -1).join('')   // "אדר"+"ב" → "אדרב"
+    if (monthStr.startsWith('ב')) monthStr = monthStr.slice(1)   // הסרת תחילית "ב"
+    const enMonth = EN_MONTH_FROM_HEB[monthStr]
+    if (!enMonth || !day || !year) return ''
+
+    let hd
+    try { hd = new HDate(day, enMonth, year) }
+    catch { hd = new HDate(day, 'Adar I', year) }   // נפילה לאחור לאדר א' בשנה מעוברת
+    const g = hd.greg()
+    const mm = String(g.getMonth() + 1).padStart(2, '0')
+    const dd = String(g.getDate()).padStart(2, '0')
+    return `${g.getFullYear()}-${mm}-${dd}`
+  } catch { return '' }
+}
